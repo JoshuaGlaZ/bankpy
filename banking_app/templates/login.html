@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - Bank Py{% endblock %}
+
+{% block extra_css %}
+<style>
+    .login-container {
+        max-width: 450px;
+        margin: 50px auto;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+        background-color: #fff;
+    }
+    .brand-logo {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    .brand-logo i {
+        font-size: 50px;
+        color: #0d6efd;
+    }
+    .form-floating {
+        margin-bottom: 15px;
+    }
+    .secure-note {
+        display: flex;
+        align-items: center;
+        margin-top: 20px;
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    .secure-note i {
+        margin-right: 10px;
+        color: #198754;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="brand-logo">
+        <i class="fas fa-lock"></i>
+        <h3>Bank Py</h3>
+        <p class="text-muted">Masuk ke akun Anda</p>
+    </div>
+    
+    <form method="post" action="{% url 'login' %}">
+        {% csrf_token %}
+        
+        <div class="form-floating">
+            <input type="text" class="form-control" id="username" name="username" placeholder="Username" required 
+                   value="{{ username|default:'' }}">
+            <label for="username">Username</label>
+        </div>
+        
+        <div class="form-floating">
+            <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+            <label for="password">Password</label>
+        </div>
+        
+        {% if require_2fa %}
+            <div class="form-floating">
+                <input type="text" class="form-control" id="totp_token" name="totp_token" placeholder="Kode 2FA" required>
+                <label for="totp_token">Kode Autentikasi Dua Faktor</label>
+                <div class="form-text">Masukkan kode 6 digit dari aplikasi autentikator Anda</div>
+            </div>
+            <input type="hidden" name="username" value="{{ username }}">
+        {% endif %}
+        
+        <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary btn-lg">Masuk</button>
+        </div>
+        
+        <div class="mt-3 text-center">
+            <p>Belum memiliki akun? <a href="{% url 'register' %}">Daftar Sekarang</a></p>
+        </div>
+    </form>
+    
+    <div class="secure-note">
+        <i class="fas fa-shield-alt"></i>
+        <span>Koneksi aman menggunakan enkripsi end-to-end</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Add password visibility toggle
+    $(document).ready(function() {
+        // Add eye icon to password field
+        $('#password').after('<i class="fas fa-eye-slash toggle-password" style="position: absolute; right: 15px; top: 15px; cursor: pointer;"></i>');
+        
+        // Toggle password visibility
+        $('.toggle-password').click(function() {
+            const input = $('#password');
+            const icon = $(this);
+            
+            if (input.attr('type') === 'password') {
+                input.attr('type', 'text');
+                icon.removeClass('fa-eye-slash').addClass('fa-eye');
+            } else {
+                input.attr('type', 'password');
+                icon.removeClass('fa-eye').addClass('fa-eye-slash');
+            }
+        });
+    });
+</script>
+{% endblock %}

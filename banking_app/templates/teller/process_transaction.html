@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+
+{% block title %}Proses Transaksi - Bank Py{% endblock %}
+
+{% block extra_css %}
+<style>
+    .transaction-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .transaction-card {
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        margin-bottom: 30px;
+    }
+    .transaction-header {
+        padding: 20px;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .transaction-body {
+        padding: 25px;
+    }
+    .transaction-footer {
+        padding: 20px;
+        background-color: #f8f9fa;
+        border-top: 1px solid #dee2e6;
+    }
+    .amount-display {
+        font-size: 2.5rem;
+        font-weight: bold;
+    }
+    .transaction-details {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .verification-section {
+        background-color: #e8f4fd;
+        border-left: 4px solid #0d6efd;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .signature-status {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 20px;
+        margin-bottom: 10px;
+    }
+    .signature-valid {
+        background-color: #d4edda;
+        color: #0f5132;
+    }
+    .signature-invalid {
+        background-color: #f8d7da;
+        color: #842029;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container transaction-container">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>
+                    <i class="fas fa-exchange-alt me-2"></i>
+                    Proses Transaksi
+                </h2>
+                <a href="{% url 'teller_dashboard' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Kembali ke Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="transaction-card">
+        <div class="transaction-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3 class="mb-0">
+                    <span class="badge bg-primary me-2">{{ transaction.transaction_type|title }}</span>
+                    Transaksi #{{ transaction.transaction_id|truncatechars:8 }}
+                </h3>
+                <span class="badge bg-warning">{{ transaction.status|title }}</span>
+            </div>
+        </div>
+        
+        <div class="transaction-body">
+            <div class="row mb-4">
+                <div class="col-md-12 text-center">
+                    <p class="text-muted mb-2">Jumlah Transaksi</p>
+                    <div class="amount-display text-primary">Rp {{ transaction.amount|floatformat:2 }}</div>
+                </div>
+            </div>
+            
+            <div class="transaction-details">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-2">
+                            <strong>Jenis Transaksi:</strong> 
+                            {{ transaction.transaction_type|title }}
+                        </p>
+                        <p class="mb-2">
+                            <strong>Dari Rekening:</strong> 
+                            {{ transaction.account.account_number }}
+                        </p>
+                        {% if transaction.recipient_account %}
+                        <p class="mb-2">
+                            <strong>Ke Rekening:</strong> 
+                            {{ transaction.recipient_account }}
+                        </p>
+                        {% endif %}
+                        <p class="mb-2">
+                            <strong>Waktu Dibuat:</strong> 
+                            {{ transaction.timestamp|date:"d M Y H:i:s" }}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-2">
+                            <strong>Status:</strong> 
+                            {{ transaction.status|title }}
+                        </p>
+                        <p class="mb-2">
+                            <strong>Nasabah:</strong> 
+                            {{ transaction.account.customer.username }}
+                        </p>
+                        <p class="mb-2">
+                            <strong>Saldo Saat Ini:</strong> 
+                            Rp {{ transaction.account.balance|floatformat:2 }}
+                        </p>
+                        <p class="mb-2">
+                            <strong>Deskripsi:</strong> 
+                            {{ transaction.description|default:"Tidak ada deskripsi" }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            {% if transaction.digital_signature %}
+            <div class="verification-section">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        Verifikasi Keamanan
+                    </h5>
+                    <span class="signature-status signature-valid">
+                        <i class="fas fa-check-circle me-1"></i>
+                        Tanda Tangan Digital Valid
+                    </span>
+                </div>
+                <p class="mb-0">Transaksi ini memiliki tanda tangan digital yang divalidasi oleh sistem. Keamanan terjamin.</p>
+            </div>
+            {% endif %}
+            
+            <form method="post" action="{% url 'process_transaction' transaction.transaction_id %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="notes" class="form-label">Catatan (opsional)</label>
+                    <textarea class="form-control" id="notes" name="notes" rows="3" 
+                              placeholder="Tambahkan catatan atau alasan persetujuan/penolakan..."></textarea>
+                </div>
+                
+                <div class="d-flex justify-content-center gap-3">
+                    <button type="submit" name="action" value="approve" class="btn btn-success btn-lg">
+                        <i class="fas fa-check-circle me-1"></i>
+                        Setujui Transaksi
+                    </button>
+                    
+                    <button type="submit" name="action" value="reject" class="btn btn-danger btn-lg">
+                        <i class="fas fa-times-circle me-1"></i>
+                        Tolak Transaksi
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <div class="transaction-footer">
+            <div class="alert alert-info mb-0">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Penting:</strong> Pastikan Anda memeriksa semua detail transaksi dengan teliti sebelum menyetujui atau menolak. Tindakan ini akan dicatat dalam log audit.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Confirmation dialog for transaction actions
+        $('form').submit(function(e) {
+            const action = $('button[type="submit"]:focus').val();
+            
+            if (!confirm(`Apakah Anda yakin ingin ${action === 'approve' ? 'menyetujui' : 'menolak'} transaksi ini?`)) {
+                e.preventDefault();
+            }
+        });
+    });
+</script>
+{% endblock %} 

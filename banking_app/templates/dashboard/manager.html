@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard Manajer - Bank Py{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        border-radius: 10px;
+        border: none;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    .stat-icon {
+        font-size: 2rem;
+        padding: 15px;
+        border-radius: 50%;
+        margin-bottom: 15px;
+    }
+    .bg-gradient-primary {
+        background: linear-gradient(45deg, #007bff, #6610f2);
+    }
+    .bg-gradient-success {
+        background: linear-gradient(45deg, #28a745, #20c997);
+    }
+    .bg-gradient-info {
+        background: linear-gradient(45deg, #17a2b8, #0dcaf0);
+    }
+    .bg-gradient-warning {
+        background: linear-gradient(45deg, #ffc107, #fd7e14);
+    }
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+    }
+    .audit-entry {
+        border-left: 4px solid #dee2e6;
+        padding-left: 15px;
+        margin-bottom: 15px;
+        transition: border-color 0.3s;
+    }
+    .audit-entry:hover {
+        border-left-color: #007bff;
+    }
+    .transaction-badge {
+        font-size: 0.8rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                <i class="fas fa-tachometer-alt me-2"></i>
+                Dashboard Manajer
+            </h2>
+            <p class="text-muted">Pantau dan kelola kegiatan bank dengan data real-time.</p>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-5">
+        <div class="col-md-3">
+            <div class="card stat-card mb-3">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-gradient-primary text-white mx-auto">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <h5 class="card-title">Transaksi Hari Ini</h5>
+                    <p class="stat-value">{{ daily_count }}</p>
+                    <p class="text-muted">Rp {{ daily_total|floatformat:2 }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card mb-3">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-gradient-success text-white mx-auto">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h5 class="card-title">Transaksi Bulan Ini</h5>
+                    <p class="stat-value">{{ monthly_count  }}</p>
+                    <p class="text-muted">Rp {{ monthly_total|floatformat:2  }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card mb-3">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-gradient-info text-white mx-auto">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                    <h5 class="card-title">Status Sistem</h5>
+                    <p class="stat-value text-success">
+                        <i class="fas fa-check-circle"></i>
+                    </p>
+                    <p class="text-muted">Semua sistem aktif</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card mb-3">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-gradient-warning text-white mx-auto">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h5 class="card-title">Transaksi Pending</h5>
+                    <p class="stat-value">{{ pending_transactions.count }}</p>
+                    <p class="text-muted">Menunggu Persetujuan</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Pending Transactions -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-hourglass-half me-2"></i>
+                        Transaksi Tertunda
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Jenis</th>
+                                    <th>Jumlah</th>
+                                    <th>Tanggal</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in pending_transactions %}
+                                <tr>
+                                    <td>{{ transaction.transaction_id|truncatechars:8 }}</td>
+                                    <td>
+                                        <span class="badge bg-primary">
+                                            {{ transaction.transaction_type|title }}
+                                        </span>
+                                    </td>
+                                    <td>Rp {{ transaction.amount|floatformat:2 }}</td>
+                                    <td>{{ transaction.timestamp|date:"d M Y H:i" }}</td>
+                                    <td>
+                                        <span class="badge bg-warning">
+                                            {{ transaction.status|title }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-3">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Tidak ada transaksi tertunda saat ini
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Audit Logs -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clipboard-list me-2"></i>
+                        Log Audit Keamanan Terbaru
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for log in recent_logs %}
+                    <div class="audit-entry">
+                        <div class="d-flex justify-content-between">
+                            <h6 class="mb-1">{{ log.event_type|title }}</h6>
+                            <small class="text-muted">{{ log.timestamp|date:"d M Y H:i" }}</small>
+                        </div>
+                        <p class="mb-1">{{ log.description }}</p>
+                        <small class="d-block text-muted">
+                            <i class="fas fa-user me-1"></i> {{ log.user.username }} |
+                            <i class="fas fa-map-marker-alt me-1"></i> {{ log.ip_address }}
+                        </small>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Tidak ada log audit terbaru
+                    </div>
+                    {% endfor %}
+                    
+                    {% if recent_logs %}
+                    <div class="text-center mt-3">
+                        <a href="{% url 'audit_logs' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-search me-1"></i>
+                            Lihat Semua Log
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reports Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-export me-2"></i>
+                        Laporan Transaksi
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form action="{% url 'export_transaction_report' %}" method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="start_date" class="form-label">Tanggal Mulai</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="end_date" class="form-label">Tanggal Akhir</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-download me-1"></i>
+                                Export CSV
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Set default date values (last 30 days)
+        const today = new Date();
+        const thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+        
+        const formatDate = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+        
+        $('#end_date').val(formatDate(today));
+        $('#start_date').val(formatDate(thirtyDaysAgo));
+    });
+</script>
+{% endblock %}

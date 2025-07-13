@@ -1,0 +1,298 @@
+{% extends 'base.html' %}
+
+{% block title %}Riwayat Transaksi - Bank Py{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-section {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .transaction-item {
+        transition: background-color 0.2s;
+    }
+    .transaction-item:hover {
+        background-color: rgba(0, 123, 255, 0.05);
+    }
+    .transaction-badge.deposit {
+        background-color: #28a745;
+    }
+    .transaction-badge.transfer {
+        background-color: #007bff;
+    }
+    .transaction-badge.withdrawal {
+        background-color: #fd7e14;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 50px 20px;
+    }
+    .empty-state i {
+        font-size: 3rem;
+        color: #6c757d;
+        margin-bottom: 20px;
+    }
+    .pagination-wrapper {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                <i class="fas fa-history me-2"></i>
+                Riwayat Transaksi
+            </h2>
+            <p class="text-muted">Lihat dan filter seluruh riwayat transaksi Anda.</p>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="row mb-4">
+        <div class="col-12 filter-section">
+            <form method="get" action="{% url 'transaction_history' %}" id="filter-form">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="account_id" class="form-label">Rekening</label>
+                        <select class="form-select" id="account_id" name="account_id">
+                            <option value="">Semua Rekening</option>
+                            {% for account in accounts %}
+                                <option value="{{ account.id }}" {% if selected_account_id == account.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ account.account_number }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="transaction_type" class="form-label">Jenis Transaksi</label>
+                        <select class="form-select" id="transaction_type" name="transaction_type">
+                            <option value="">Semua Jenis</option>
+                            <option value="transfer">Transfer</option>
+                            <option value="deposit">Setoran</option>
+                            <option value="withdrawal">Penarikan</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="">Semua Status</option>
+                            <option value="completed">Selesai</option>
+                            <option value="pending">Pending</option>
+                            <option value="failed">Gagal</option>
+                            <option value="cancelled">Dibatalkan</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-filter me-1"></i>
+                            Filter
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID Transaksi</th>
+                                    <th>Tanggal</th>
+                                    <th>Rekening</th>
+                                    <th>Jenis</th>
+                                    <th>Jumlah</th>
+                                    <th>Status</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in transactions %}
+                                <tr class="transaction-item">
+                                    <td>
+                                        <span class="fw-medium" data-bs-toggle="tooltip" title="{{ transaction.transaction_id }}">
+                                            {{ transaction.transaction_id|truncatechars:8 }}
+                                        </span>
+                                    </td>
+                                    <td>{{ transaction.timestamp|date:"d M Y H:i" }}</td>
+                                    <td>{{ transaction.account.account_number }}</td>
+                                    <td>
+                                        <span class="badge transaction-badge {{ transaction.transaction_type }}">
+                                            {{ transaction.transaction_type|title }}
+                                        </span>
+                                    </td>
+                                    <td class="fw-medium">
+                                        {% if transaction.transaction_type == 'deposit' or transaction.recipient_account in user_account_numbers %}
+                                        <span class="text-success">+</span>
+                                        {% else %}
+                                        <span class="text-danger">-</span>
+                                        {% endif %}
+                                        Rp {{ transaction.amount|floatformat:2 }}
+                                    </td>
+                                    <td>
+                                        {% if transaction.status == 'completed' %}
+                                            <span class="badge bg-success">{{ transaction.status|title }}</span>
+                                        {% elif transaction.status == 'pending' %}
+                                            <span class="badge bg-warning">{{ transaction.status|title }}</span>
+                                        {% elif transaction.status == 'cancelled' %}
+                                            <span class="badge bg-secondary">{{ transaction.status|title }}</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">{{ transaction.status|title }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-secondary show-details">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Detail
+                                        </button>
+                                        {% if transaction.status == 'completed' %}
+                                        <a href="{% url 'download_transaction_pdf' transaction.transaction_id %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-download me-1"></i>
+                                            PDF
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr class="transaction-details" style="display: none;">
+                                    <td colspan="7">
+                                        <div class="card bg-light">
+                                            <div class="card-body p-3">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <p><strong>ID Transaksi:</strong> {{ transaction.transaction_id }}</p>
+                                                        <p>
+                                                            <strong>
+                                                                {% if transaction.account.customer == user and transaction.transaction_type == 'transfer' %}
+                                                                Rekening Sumber:
+                                                                {% else %}
+                                                                Rekening:
+                                                                {% endif %}
+                                                            </strong> 
+                                                            {{ transaction.account.account_number }}
+                                                        </p>
+                                                        <p><strong>Jenis Transaksi:</strong> 
+                                                            {{ transaction.transaction_type|title }}
+                                                            {% if transaction.transaction_type == 'transfer' %}
+                                                                {% if transaction.account.customer == user %}
+                                                                    (Keluar)
+                                                                {% else %}
+                                                                    (Masuk)
+                                                                {% endif %}
+                                                            {% endif %}
+                                                        </p>
+                                                        <p><strong>Jumlah:</strong> Rp {{ transaction.amount|floatformat:2 }}</p>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <p><strong>Waktu:</strong> {{ transaction.timestamp|date:"d M Y H:i:s" }}</p>
+                                                        <p><strong>Status:</strong> {{ transaction.status|title }}</p>
+                                                        {% if transaction.recipient_account %}
+                                                            {% if transaction.account.customer == user %}
+                                                            <p><strong>Rekening Tujuan:</strong> {{ transaction.recipient_account }}</p>
+                                                            {% else %}
+                                                            <p><strong>Rekening Sumber:</strong> {{ transaction.account.account_number }}</p>
+                                                            <p><strong>Dikirim ke:</strong> 
+                                                                {% for account in accounts %}
+                                                                    {% if account.account_number == transaction.recipient_account %}
+                                                                        {{ account.account_number }}
+                                                                    {% endif %}
+                                                                {% endfor %}
+                                                            </p>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                        <p><strong>Deskripsi:</strong> {{ transaction.description|default:"Tidak ada deskripsi" }}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7">
+                                        <div class="empty-state">
+                                            <i class="fas fa-search"></i>
+                                            <h4>Tidak Ada Transaksi</h4>
+                                            <p class="text-muted">Belum ada transaksi yang sesuai dengan filter Anda.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="pagination-wrapper">
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination">
+                                {% if transactions.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?{% if selected_account_id %}account_id={{ selected_account_id }}&{% endif %}{% if selected_transaction_type %}transaction_type={{ selected_transaction_type }}&{% endif %}{% if selected_status %}status={{ selected_status }}&{% endif %}page={{ transactions.previous_page_number }}">Previous</a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                                    </li>
+                                {% endif %}
+                                
+                                {% for i in transactions.paginator.page_range %}
+                                    {% if i == transactions.number %}
+                                        <li class="page-item active">
+                                            <a class="page-link" href="#">{{ i }}</a>
+                                        </li>
+                                    {% elif i > transactions.number|add:"-3" and i < transactions.number|add:"3" %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?{% if selected_account_id %}account_id={{ selected_account_id }}&{% endif %}{% if selected_transaction_type %}transaction_type={{ selected_transaction_type }}&{% endif %}{% if selected_status %}status={{ selected_status }}&{% endif %}page={{ i }}">{{ i }}</a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if transactions.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?{% if selected_account_id %}account_id={{ selected_account_id }}&{% endif %}{% if selected_transaction_type %}transaction_type={{ selected_transaction_type }}&{% endif %}{% if selected_status %}status={{ selected_status }}&{% endif %}page={{ transactions.next_page_number }}">Next</a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Next</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Add tooltip for transaction IDs
+        $('[data-bs-toggle="tooltip"]').tooltip();
+        
+        // Toggle transaction details
+        $('.show-details').click(function() {
+            $(this).closest('tr').next('.transaction-details').toggle();
+        });
+        
+        // Auto-submit form when account changes
+        $('#account_id, #transaction_type, #status').change(function() {
+            $('#filter-form').submit();
+        });
+    });
+</script>
+{% endblock %}

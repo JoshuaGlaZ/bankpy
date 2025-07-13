@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block title %}Buat Rekening Baru - Nasabah {{ customer.username }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card-header {
+        background-color: #f8f9fa;
+    }
+    .customer-info-item {
+        margin-bottom: 0.5rem;
+    }
+    .form-container {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'teller_dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'customer_detail' customer.id %}">Detail Nasabah</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Buat Rekening Baru</li>
+                </ol>
+            </nav>
+            <h2>
+                <i class="fas fa-plus-circle me-2 text-primary"></i>
+                Buat Rekening Baru
+            </h2>
+            <p class="text-muted">Buat rekening baru untuk nasabah {{ customer.username }}</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user me-2"></i>
+                        Informasi Nasabah
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="customer-info-item">
+                        <strong>Username:</strong> {{ customer.username }}
+                    </div>
+                    <div class="customer-info-item">
+                        <strong>Email:</strong> {{ customer.email }}
+                    </div>
+                    <div class="customer-info-item">
+                        <strong>Telepon:</strong> {{ customer.phone_number|default:"Tidak Ada" }}
+                    </div>
+                    {% if customer.customerprofile %}
+                    <div class="customer-info-item">
+                        <strong>Tanggal Lahir:</strong> {{ customer.customerprofile.date_of_birth|date:"d M Y" }}
+                    </div>
+                    {% endif %}
+                    <hr>
+                    <div class="customer-info-item">
+                        <strong>Rekening yang Dimiliki:</strong>
+                    </div>
+                    {% for account in customer.account_set.all %}
+                        <div class="alert alert-info">
+                            {{ account.account_number }} <br>
+                            <small>Saldo: Rp {{ account.balance|floatformat:2 }}</small>
+                        </div>
+                    {% empty %}
+                        <div class="alert alert-warning">
+                            Nasabah belum memiliki rekening.
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card form-container">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-plus-circle me-2"></i>
+                        Form Pembuatan Rekening
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'create_account' customer.id %}">
+                        {% csrf_token %}
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Nomor rekening akan digenerate secara otomatis oleh sistem.
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="initial_balance" class="form-label">Setoran Awal (Rp)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">Rp</span>
+                                <input type="text" class="form-control" id="initial_balance" name="initial_balance" 
+                                      placeholder="0,00" value="0">
+                            </div>
+                            <div class="form-text">Masukkan jumlah setoran awal. Kosongkan atau isi dengan 0 jika tidak ada setoran awal.</div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check-circle me-2"></i>
+                                Buat Rekening Baru
+                            </button>
+                            <a href="{% url 'customer_detail' customer.id %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times-circle me-2"></i>
+                                Batal
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Format currency input
+        $('#initial_balance').on('input', function() {
+            // Remove non-numeric characters except for decimal point or comma
+            let value = $(this).val().replace(/[^0-9.,]/g, '');
+            
+            // Replace comma with dot for decimal
+            value = value.replace(/,/g, '.');
+            
+            // Ensure only one decimal point
+            const parts = value.split('.');
+            if (parts.length > 2) {
+                value = parts[0] + '.' + parts.slice(1).join('');
+            }
+            
+            $(this).val(value);
+        });
+    });
+</script>
+{% endblock %} 

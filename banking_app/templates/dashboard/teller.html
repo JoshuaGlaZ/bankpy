@@ -1,0 +1,245 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard Teller - Bank Py{% endblock %}
+
+{% block extra_css %}
+<style>
+    .action-card {
+        transition: transform 0.3s;
+        height: 100%;
+    }
+    .action-card:hover {
+        transform: translateY(-5px);
+    }
+    .action-icon {
+        font-size: 2.5rem;
+        margin-bottom: 15px;
+        color: #007bff;
+    }
+    .pending-transaction {
+        transition: background-color 0.2s;
+    }
+    .pending-transaction:hover {
+        background-color: rgba(0, 123, 255, 0.05);
+    }
+    .search-container {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .quick-action-btn {
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        transition: all 0.3s;
+    }
+    .quick-action-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                <i class="fas fa-tachometer-alt me-2"></i>
+                Dashboard Teller
+            </h2>
+            <p class="text-muted">Selamat datang, {{ user.username }}! Kelola transaksi dan layani nasabah.</p>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-md-12 search-container">
+            <div class="row">
+                <div class="col">
+                    <h4 class="mb-3">
+                        <i class="fas fa-search me-2"></i>
+                        Cari Nasabah
+                    </h4>
+                    <form action="{% url 'search_customer' %}" method="get" class="d-flex">
+                        <input type="text" name="query" class="form-control form-control-lg me-2" 
+                               placeholder="Masukkan nomor rekening atau nama nasabah">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i>
+                            Cari
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Nasabah Baru -->
+    {% if customers_without_account %}
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h4>
+                <i class="fas fa-user-plus me-2"></i>
+                Nasabah Baru (Belum Punya Rekening)
+            </h4>
+            <ul class="list-group">
+                {% for cust in customers_without_account %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ cust.username }}</strong> &ndash; {{ cust.email }}
+                    </div>
+                    <a href="{% url 'create_account' cust.id %}" class="btn btn-sm btn-success">
+                        <i class="fas fa-plus-circle me-1"></i> Buat Rekening
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+
+
+
+    <!-- Pending Transactions -->
+    <div class="row" id="pending-transactions">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-hourglass-half me-2"></i>
+                        Transaksi Pending
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID Transaksi</th>
+                                    <th>Nasabah</th>
+                                    <th>Jenis</th>
+                                    <th>Jumlah</th>
+                                    <th>Waktu</th>
+                                    <th>Status</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in pending_transactions %}
+                                <tr class="pending-transaction">
+                                    <td>{{ transaction.transaction_id|truncatechars:8 }}</td>
+                                    <td>
+                                        <a href="{% url 'customer_detail' transaction.account.customer.id %}" class="text-primary">
+                                            {{ transaction.account.customer.username }}
+                                            <i class="fas fa-external-link-alt ms-1" style="font-size: 0.7rem;"></i>
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">
+                                            {{ transaction.transaction_type|title }}
+                                        </span>
+                                    </td>
+                                    <td class="fw-bold">Rp {{ transaction.amount|floatformat:2 }}</td>
+                                    <td>{{ transaction.timestamp|date:"d M Y H:i" }}</td>
+                                    <td>
+                                        <span class="badge bg-warning">
+                                            {{ transaction.status|title }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{% url 'process_transaction' transaction.transaction_id %}" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-check-circle me-1"></i>
+                                                Proses
+                                            </a>
+                                            <a href="{% url 'customer_detail' transaction.account.customer.id %}" class="btn btn-sm btn-outline-secondary">
+                                                <i class="fas fa-user me-1"></i>
+                                                Detail
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Tidak ada transaksi pending saat ini
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Customer Activity -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-users me-2"></i>
+                        Aktivitas Nasabah Terbaru
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nasabah</th>
+                                    <th>Waktu</th>
+                                    <th>Aktivitas</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in pending_transactions|slice:":5" %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'customer_detail' transaction.account.customer.id %}" class="text-primary">
+                                            {{ transaction.account.customer.username }}
+                                        </a>
+                                    </td>
+                                    <td>{{ transaction.timestamp|date:"d M Y H:i" }}</td>
+                                    <td>{{ transaction.description|default:"Transaksi" }}</td>
+                                    <td>
+                                        <a href="{% url 'customer_detail' transaction.account.customer.id %}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-user me-1"></i>
+                                            Detail
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-3">
+                                        Tidak ada aktivitas terbaru
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Toggle transaction details
+        $('.show-details').click(function(e) {
+            e.preventDefault();
+            $(this).closest('tr').next('.transaction-details').toggle();
+        });
+    });
+</script>
+{% endblock %}

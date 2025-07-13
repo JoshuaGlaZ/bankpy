@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Bank Py{% endblock %}</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Custom styles -->
+    <style>
+        .sidebar {
+            min-height: calc(100vh - 56px);
+            background-color: #343a40;
+            color: white;
+        }
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.75);
+        }
+        .sidebar .nav-link:hover {
+            color: rgba(255, 255, 255, 1);
+        }
+        .sidebar .nav-link.active {
+            color: white;
+            background-color: #007bff;
+        }
+        .content {
+            padding: 20px;
+        }
+        .transaction-badge {
+            font-size: 0.8rem;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% if user.is_authenticated %}
+                                             {% if user.user_type == 'customer' %}
+                                                 {% url 'customer_dashboard' %}
+                                             {% elif user.user_type == 'teller' %}
+                                                 {% url 'teller_dashboard' %}
+                                             {% elif user.user_type == 'manager' %}
+                                                 {% url 'manager_dashboard' %}
+                                             {% else %}
+                                                 {% url 'home' %}
+                                             {% endif %}
+                                         {% else %}
+                                             {% url 'home' %}
+                                         {% endif %}">
+                <i class="fas fa-lock me-2"></i>BankPy
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-user-circle me-1"></i>{{ user.username }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                <li><a class="dropdown-item" href="{% url 'profile' %}">Profil</a></li>
+                                <li><a class="dropdown-item" href="{% url 'setup_2fa' %}">Atur 2FA</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'logout' %}">Keluar</a></li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'login' %}">Masuk</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'register' %}">Daftar</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    
+    <!-- Offcanvas Sidebar for Mobile -->
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="mobileSidebar">
+      <div class="offcanvas-header">
+          <h5 class="offcanvas-title">Menu</h5>
+          <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"></button>
+      </div>
+      <div class="offcanvas-body p-0 sidebar">
+          <ul class="nav flex-column pt-3">
+              {% if user.is_authenticated %}
+                  {% if user.user_type == 'customer' %}
+                      <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'customer_dashboard' %}active{% endif %}" href="{% url 'customer_dashboard' %}"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</a></li>
+                      <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'transaction_history' %}active{% endif %}" href="{% url 'transaction_history' %}"><i class="fas fa-history me-2"></i>Riwayat Transaksi</a></li>
+                      <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'new_transfer' %}active{% endif %}" href="{% url 'new_transfer' %}"><i class="fas fa-paper-plane me-2"></i>Transfer Baru</a></li>
+                  {% elif user.user_type == 'teller' %}
+                      <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'teller_dashboard' %}active{% endif %}" href="{% url 'teller_dashboard' %}"><i class="fas fa-tachometer-alt me-2"></i>Dashboard Teller</a></li>
+                      <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'search_customer' %}active{% endif %}" href="{% url 'search_customer' %}"><i class="fas fa-search me-2"></i>Cari Nasabah</a></li>
+                  {% elif user.user_type == 'manager' %}
+                      <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'manager_dashboard' %}active{% endif %}" href="{% url 'manager_dashboard' %}"><i class="fas fa-tachometer-alt me-2"></i>Dashboard Manager</a></li>
+                      <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'audit_logs' %}active{% endif %}" href="{% url 'audit_logs' %}"><i class="fas fa-clipboard-list me-2"></i>Audit Logs</a></li>
+                      <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'export_transaction_report' %}active{% endif %}" href="{% url 'export_transaction_report' %}"><i class="fas fa-file-export me-2"></i>Export Transaksi</a></li>
+                  {% endif %}
+              {% endif %}
+          </ul>
+      </div>
+  </div>
+
+  <div class="container-fluid">
+      <div class="row">
+          {% if user.is_authenticated %}
+              <!-- Desktop Sidebar -->
+              <aside class="col-lg-2 d-none d-lg-block sidebar p-3">
+                  <h6 class="text-white text-uppercase px-3 mb-3">Menu</h6>
+                  <ul class="nav flex-column">
+                      {% if user.user_type == 'customer' %}
+                          <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'customer_dashboard' %}active{% endif %}" href="{% url 'customer_dashboard' %}"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</a></li>
+                          <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'transaction_history' %}active{% endif %}" href="{% url 'transaction_history' %}"><i class="fas fa-history me-2"></i>Riwayat Transaksi</a></li>
+                          <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'new_transfer' %}active{% endif %}" href="{% url 'new_transfer' %}"><i class="fas fa-paper-plane me-2"></i>Transfer Baru</a></li>
+                      {% endif %}
+                      {% if user.user_type == 'teller' %}
+                          <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'teller_dashboard' %}active{% endif %}" href="{% url 'teller_dashboard' %}"><i class="fas fa-tachometer-alt me-2"></i>Dashboard Teller</a></li>
+                          <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'search_customer' %}active{% endif %}" href="{% url 'search_customer' %}"><i class="fas fa-search me-2"></i>Cari Nasabah</a></li>
+                      {% endif %}
+                      {% if user.user_type == 'manager' %}
+                          <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'manager_dashboard' %}active{% endif %}" href="{% url 'manager_dashboard' %}"><i class="fas fa-tachometer-alt me-2"></i>Dashboard Manager</a></li>
+                          <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'audit_logs' %}active{% endif %}" href="{% url 'audit_logs' %}"><i class="fas fa-clipboard-list me-2"></i>Audit Logs</a></li>
+                          <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'export_transaction_report' %}active{% endif %}" href="{% url 'export_transaction_report' %}"><i class="fas fa-file-export me-2"></i>Export Transaksi</a></li>
+                      {% endif %}
+                  </ul>
+              </aside>
+              <main class="col-lg-10 ms-auto content">
+          {% else %}
+              <main class="col-12 content">
+          {% endif %}
+
+              {% if messages %}
+                  {% for message in messages %}
+                      <div class="alert alert-{% if message.tags == 'error' %}danger
+                                              {% else %}{{ message.tags }}
+                                              {% endif %} alert-dismissible fade show mt-3" role="alert">
+                          {{ message }}
+                          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                      </div>
+                  {% endfor %}
+              {% endif %}
+
+              {% block content %}{% endblock %}
+          </main>
+      </div>
+  </div>
+
+  <footer class="footer mt-auto py-3 bg-light">
+      <div class="container d-flex justify-content-between">
+          <span class="text-muted">Bank Py &copy; {% now "Y" %}</span>
+          <span class="text-muted">Secure Banking Solutions</span>
+      </div>
+  </footer>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

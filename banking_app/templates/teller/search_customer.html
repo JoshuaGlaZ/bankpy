@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block title %}Cari Nasabah - Bank Py{% endblock %}
+
+{% block extra_css %}
+<style>
+    .search-container {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 30px;
+    }
+    .customer-card {
+        border-radius: 10px;
+        transition: transform 0.3s;
+        margin-bottom: 20px;
+    }
+    .customer-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    .empty-state {
+        text-align: center;
+        padding: 50px 20px;
+    }
+    .empty-state i {
+        font-size: 4rem;
+        color: #6c757d;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                <i class="fas fa-search me-2"></i>
+                Pencarian Nasabah
+            </h2>
+            <p class="text-muted">Cari data nasabah berdasarkan nomor rekening atau nama.</p>
+        </div>
+    </div>
+
+    <!-- Search Form -->
+    <div class="row">
+        <div class="col-12">
+            <div class="search-container">
+                <form action="{% url 'search_customer' %}" method="get">
+                    <div class="input-group input-group-lg">
+                        <input type="text" class="form-control" name="query" placeholder="Masukkan nomor rekening atau nama nasabah" 
+                               value="{{ query }}" required>
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-search me-1"></i>
+                            Cari
+                        </button>
+                    </div>
+                    <div class="form-text mt-2">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Anda dapat mencari berdasarkan nomor rekening, username, atau nama nasabah
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Results -->
+    <div class="row mb-4">
+        <div class="col">
+            {% if query %}
+                <h4>Hasil Pencarian untuk "{{ query }}"</h4>
+                <p class="text-muted">Ditemukan {{ customers|length }} nasabah</p>
+            {% else %}
+                <h4>Nasabah Terbaru</h4>
+                <p class="text-muted">Daftar nasabah yang baru terdaftar</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        {% if customers %}
+            {% for customer in customers %}
+            <div class="col-md-6">
+                <div class="card customer-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title mb-0">{{ customer.username }}</h5>
+                            <span class="badge bg-{% if customer.is_active %}success{% else %}danger{% endif %}">
+                                {% if customer.is_active %}Aktif{% else %}Non-Aktif{% endif %}
+                            </span>
+                        </div>
+                        <p class="card-text text-muted">{{ customer.email }}</p>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <small class="text-muted d-block">Terdaftar Pada</small>
+                                <span>{{ customer.date_joined|date:"d M Y" }}</span>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted d-block">Login Terakhir</small>
+                                <span>{{ customer.last_login|date:"d M Y H:i"|default:"Belum Pernah" }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <a href="{% url 'customer_detail' customer.id %}" class="btn btn-primary">
+                                <i class="fas fa-user-edit me-1"></i>
+                                Lihat Detail
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% elif query %}
+            <div class="col-12">
+                <div class="empty-state">
+                    <i class="fas fa-search"></i>
+                    <h4>Tidak Ditemukan</h4>
+                    <p class="text-muted">Tidak ada nasabah yang sesuai dengan pencarian "{{ query }}".</p>
+                    <a href="{% url 'search_customer' %}" class="btn btn-outline-primary mt-3">
+                        <i class="fas fa-redo me-1"></i>
+                        Reset Pencarian
+                    </a>
+                </div>
+            </div>
+        {% else %}
+            <div class="col-12">
+                <div class="empty-state">
+                    <i class="fas fa-users"></i>
+                    <h4>Mulai Pencarian</h4>
+                    <p class="text-muted">Masukkan nomor rekening atau nama nasabah pada kolom pencarian di atas.</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 

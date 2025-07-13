@@ -1,0 +1,236 @@
+{% extends 'base.html' %}
+
+{% block title %}Transfer Baru - Bank Py{% endblock %}
+
+{% block extra_css %}
+<style>
+    .transfer-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .form-section {
+        background-color: #fff;
+        border-radius: 10px;
+        padding: 25px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        margin-bottom: 30px;
+    }
+    .form-header {
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .amount-input {
+        font-size: 1.5rem;
+        font-weight: bold;
+        height: 60px;
+    }
+    .security-note {
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        background-color: #fff8e1;
+        margin-top: 20px;
+    }
+    .preview-section {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 30px;
+    }
+    .security-icon {
+        color: #28a745;
+        margin-right: 10px;
+    }
+    .secure-badge {
+        display: inline-block;
+        background-color: #d4edda;
+        color: #155724;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        margin-left: 10px;
+        vertical-align: middle;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container transfer-container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                <i class="fas fa-paper-plane me-2"></i>
+                Transfer Baru
+            </h2>
+            <p class="text-muted">Kirim uang dengan aman ke rekening tujuan.</p>
+        </div>
+    </div>
+
+    <form method="post" action="{% url 'new_transfer' %}" id="transfer-form">
+        {% csrf_token %}
+        
+        <div class="form-section">
+            <div class="form-header">
+                <h4><i class="fas fa-wallet me-2"></i> Detail Transfer</h4>
+            </div>
+            
+            <div class="mb-4">
+                <label for="from_account" class="form-label">Rekening Sumber</label>
+                <select class="form-select" id="from_account" name="from_account" required>
+                    <option value="" selected disabled>Pilih Rekening</option>
+                    {% for account in accounts %}
+                        <option value="{{ account.id }}" data-balance="{{ account.balance }}">
+                            {{ account.account_number }} - (Rp {{ account.balance|floatformat:2 }})
+                        </option>
+                    {% endfor %}
+                </select>
+                <div class="form-text" id="balance-info"></div>
+            </div>
+            
+            <div class="mb-4">
+                <label for="to_account" class="form-label">Rekening Tujuan</label>
+                <input type="text" class="form-control" id="to_account" name="to_account" 
+                       placeholder="Masukkan nomor rekening tujuan" required>
+                <div class="form-text">Masukkan nomor rekening tujuan dengan teliti</div>
+            </div>
+
+            <div class="mb-4">
+              <label for="amount" class="form-label">Jumlah Transfer</label>
+              <div class="input-group">
+                <span class="input-group-text">Rp</span>
+                <input
+                  type="number"
+                  id="amount"
+                  name="amount"
+                  class="form-control amount-input"
+                  placeholder="0.00"
+                  step="0.01"
+                  min="10000"
+                  max="9999999999999.99"
+                  inputmode="decimal"
+                  pattern="^\d+(\.\d{1,2})?$"
+                  required
+                >
+              </div>
+              <div class="form-text" id="amount-warning"></div>
+            </div>
+            
+            <div class="mb-4">
+                <label for="description" class="form-label">Keterangan</label>
+                <textarea class="form-control" id="description" name="description" 
+                         placeholder="Masukkan keterangan transfer (opsional)" rows="3"></textarea>
+            </div>
+            
+            <div class="security-note">
+                <h5>
+                    <i class="fas fa-shield-alt security-icon"></i>
+                    Informasi Keamanan
+                </h5>
+                <p class="mb-0">Transfer Anda dilengkapi tanda tangan digital untuk keamanan ekstra. Pastikan rekening tujuan sudah benar sebelum melanjutkan.</p>
+            </div>
+        </div>
+        
+        <div class="preview-section" id="transfer-preview" style="display: none;">
+            <h4 class="mb-3">Konfirmasi Transfer</h4>
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Rekening Sumber:</strong> <span id="preview-from"></span></p>
+                    <p><strong>Rekening Tujuan:</strong> <span id="preview-to"></span></p>
+                    <p><strong>Jumlah Transfer:</strong> <span id="preview-amount"></span></p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Keterangan:</strong> <span id="preview-description">-</span></p>
+                    <p><strong>Biaya:</strong> <span class="text-success">Gratis</span></p>
+                    <p>
+                        <strong>Keamanan:</strong> 
+                        <span class="secure-badge">
+                            <i class="fas fa-lock-alt"></i> Tanda Tangan Digital
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="d-grid gap-2 mt-4">
+            <button type="button" id="preview-button" class="btn btn-outline-primary btn-lg">
+                <i class="fas fa-check-circle me-1"></i>
+                Pratinjau Transfer
+            </button>
+            <button type="submit" id="submit-button" class="btn btn-primary btn-lg" style="display: none;">
+                <i class="fas fa-paper-plane me-1"></i>
+                Kirim Transfer
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Check account balance when selecting account
+        $('#from_account').change(function() {
+            const selectedOption = $(this).find('option:selected');
+            const balance = parseFloat(selectedOption.data('balance'));
+            if (!isNaN(balance)) {
+                $('#balance-info').html(`Saldo tersedia: <strong>Rp ${balance.toFixed(2)}</strong>`);
+            } else {
+                $('#balance-info').text('');
+            }
+        });
+        
+        // Format amount with thousand separator
+        $('#amount').on('input', function() {
+            const amount = parseFloat($(this).val());
+            const selectedOption = $('#from_account').find('option:selected');
+            const balance = parseFloat(selectedOption.data('balance'));
+            
+            if (!isNaN(amount) && !isNaN(balance)) {
+                if (amount > balance) {
+                    $('#amount-warning').html('<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i> Saldo tidak mencukupi</span>');
+                } else if (amount < 10000) {
+                    $('#amount-warning').html('<span class="text-warning"><i class="fas fa-info-circle me-1"></i> Minimum transfer Rp 10.000</span>');
+                } else {
+                    $('#amount-warning').html('<span class="text-success"><i class="fas fa-check-circle me-1"></i> Jumlah valid</span>');
+                }
+            } else {
+                $('#amount-warning').text('');
+            }
+        });
+        
+        // Show preview
+        $('#preview-button').click(function() {
+            // Get form values
+            const fromAccount = $('#from_account option:selected');
+            const toAccount = $('#to_account').val();
+            const amount = parseFloat($('#amount').val());
+            const description = $('#description').val() || '-';
+            
+            // Validate required fields
+            if (fromAccount.val() === '' || toAccount === '' || isNaN(amount)) {
+                alert('Lengkapi semua data yang diperlukan terlebih dahulu.');
+                return;
+            }
+            
+            // Set preview values
+            $('#preview-from').text(fromAccount.text());
+            $('#preview-to').text(toAccount);
+            $('#preview-amount').text(`Rp ${amount.toFixed(2)}`);
+            $('#preview-description').text(description);
+            
+            // Show preview section and submit button
+            $('#transfer-preview').slideDown();
+            $(this).hide();
+            $('#submit-button').show();
+        });
+        
+        // Go back from preview
+        $('.edit-transfer').click(function(e) {
+            e.preventDefault();
+            $('#transfer-preview').slideUp();
+            $('#preview-button').show();
+            $('#submit-button').hide();
+        });
+    });
+</script>
+{% endblock %}

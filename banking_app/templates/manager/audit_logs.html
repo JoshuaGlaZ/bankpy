@@ -1,0 +1,359 @@
+{% extends 'base.html' %}
+
+{% block title %}Log Audit Keamanan - Bank Py{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-section {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+    .event-item {
+        transition: background-color 0.2s;
+    }
+    .event-item:hover {
+        background-color: rgba(0, 123, 255, 0.05);
+    }
+    .event-badge {
+        width: 120px;
+        text-align: center;
+        display: inline-block;
+        padding: 5px 10px;
+        font-size: 0.875rem;
+        border-radius: 0.25rem;
+    }
+    .event-badge.login {
+        background-color: #cff4fc;
+        color: #055160;
+    }
+    .event-badge.logout {
+        background-color: #d1e7dd;
+        color: #0f5132;
+    }
+    .event-badge.register {
+        background-color: #e2e3e5;
+        color: #41464b;
+    }
+    .event-badge.failed_login {
+        background-color: #f8d7da;
+        color: #842029;
+    }
+    .event-badge.sensitive_access {
+        background-color: #fff3cd;
+        color: #664d03;
+    }
+    .event-badge.transaction {
+        background-color: #d3d3ff;
+        color: #3b0764;
+    }
+    .event-badge.security_update {
+        background-color: #cff4fc;
+        color: #055160;
+    }
+    .pagination-wrapper {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+    }
+    .ip-data {
+        font-family: monospace;
+    }
+    .export-section {
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                <i class="fas fa-clipboard-list me-2"></i>
+                Log Audit Keamanan
+            </h2>
+            <p class="text-muted">Pantau aktivitas pengguna dan deteksi potensi ancaman keamanan.</p>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="row">
+        <div class="col-12">
+            <div class="filter-section">
+                <form method="get" action="{% url 'audit_logs' %}">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label for="event_type" class="form-label">Jenis Event</label>
+                            <select class="form-select" id="event_type" name="event_type">
+                                <option value="">Semua</option>
+                                {% for event_type in event_types %}
+                                    <option value="{{ event_type }}" {% if filters.event_type == event_type %}selected{% endif %}>
+                                        {{ event_type|title }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" name="username" 
+                                  placeholder="Cari berdasarkan username" value="{{ filters.username }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="start_date" class="form-label">Tanggal Mulai</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date"
+                                  value="{{ filters.start_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="end_date" class="form-label">Tanggal Akhir</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date"
+                                  value="{{ filters.end_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-12 text-end">
+                            <a href="{% url 'audit_logs' %}" class="btn btn-outline-secondary me-2">
+                                <i class="fas fa-redo me-1"></i>
+                                Reset
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter me-1"></i>
+                                Filter
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logs Table -->
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>
+                            Daftar Log
+                        </h5>
+                        <span class="badge bg-primary">{{ logs.count }} Log</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Waktu</th>
+                                    <th>Jenis Event</th>
+                                    <th>Pengguna</th>
+                                    <th>IP Address</th>
+                                    <th>Deskripsi</th>
+                                    <th>Detail</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in logs %}
+                                <tr class="event-item">
+                                    <td>{{ log.timestamp|date:"d M Y H:i:s" }}</td>
+                                    <td>
+                                        <span class="badge event-badge {{ log.event_type }}">
+                                            {{ log.event_type|title }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if log.user %}
+                                            {{ log.user.username }}
+                                        {% else %}
+                                            <span class="text-muted">Anonim</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="ip-data">{{ log.ip_address }}</td>
+                                    <td>{{ log.description|truncatechars:50 }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary show-details" data-log-id="{{ log.id }}">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-4">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Tidak ada log audit yang sesuai dengan filter Anda
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="pagination-wrapper">
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination">
+                                {% if logs.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?{% if filters.event_type %}event_type={{ filters.event_type }}&{% endif %}{% if filters.username %}username={{ filters.username }}&{% endif %}{% if filters.start_date %}start_date={{ filters.start_date|date:'Y-m-d' }}&{% endif %}{% if filters.end_date %}end_date={{ filters.end_date|date:'Y-m-d' }}&{% endif %}page={{ logs.previous_page_number }}">Previous</a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                                    </li>
+                                {% endif %}
+                                
+                                {% for i in logs.paginator.page_range %}
+                                    {% if i == logs.number %}
+                                        <li class="page-item active">
+                                            <a class="page-link" href="#">{{ i }}</a>
+                                        </li>
+                                    {% elif i > logs.number|add:"-3" and i < logs.number|add:"3" %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?{% if filters.event_type %}event_type={{ filters.event_type }}&{% endif %}{% if filters.username %}username={{ filters.username }}&{% endif %}{% if filters.start_date %}start_date={{ filters.start_date|date:'Y-m-d' }}&{% endif %}{% if filters.end_date %}end_date={{ filters.end_date|date:'Y-m-d' }}&{% endif %}page={{ i }}">{{ i }}</a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if logs.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?{% if filters.event_type %}event_type={{ filters.event_type }}&{% endif %}{% if filters.username %}username={{ filters.username }}&{% endif %}{% if filters.start_date %}start_date={{ filters.start_date|date:'Y-m-d' }}&{% endif %}{% if filters.end_date %}end_date={{ filters.end_date|date:'Y-m-d' }}&{% endif %}page={{ logs.next_page_number }}">Next</a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Next</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Log Detail Modal -->
+<div class="modal fade" id="logDetailModal" tabindex="-1" aria-labelledby="logDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="logDetailModalLabel">Detail Log Audit</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="log-details">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>ID Log:</strong> <span id="log-id"></span></p>
+                            <p class="mb-1"><strong>Waktu:</strong> <span id="log-timestamp"></span></p>
+                            <p class="mb-1"><strong>Jenis Event:</strong> <span id="log-event-type"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Pengguna:</strong> <span id="log-user"></span></p>
+                            <p class="mb-1"><strong>IP Address:</strong> <span id="log-ip" class="ip-data"></span></p>
+                            <p class="mb-1"><strong>User Agent:</strong> <span id="log-user-agent"></span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0">Deskripsi</h6>
+                        </div>
+                        <div class="card-body">
+                            <p id="log-description" class="mb-0"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">Additional Data</h6>
+                        </div>
+                        <div class="card-body">
+                            <pre id="log-additional-data" class="mb-0"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        $('#event_type, #start_date, #end_date').change(function() {
+            $(this).closest('form').submit();
+        });
+        
+        $('.show-details').click(function() {
+            const logId = $(this).data('log-id');
+            const modal = new bootstrap.Modal(document.getElementById('logDetailModal'));
+            
+            $('#log-id').text('Loading...');
+            $('#log-timestamp').text('Loading...');
+            $('#log-event-type').text('Loading...');
+            $('#log-user').text('Loading...');
+            $('#log-ip').text('Loading...');
+            $('#log-user-agent').text('Loading...');
+            $('#log-description').text('Loading...');
+            $('#log-additional-data').text('Loading...');
+
+            modal.show();
+
+            $.ajax({
+                url: '{% url "audit_log_detail" %}',
+                type: 'GET',
+                data: {
+                    log_id: logId
+                },
+                success: function(response) {
+                    $('#log-id').text(response.id);
+                    $('#log-timestamp').text(response.timestamp);
+                    $('#log-event-type').text(response.event_type);
+                    $('#log-user').text(response.user);
+                    $('#log-ip').text(response.ip_address);
+                    $('#log-user-agent').text(response.user_agent);
+                    $('#log-description').text(response.description);
+                    if(response.additional_data) {
+                        $('#log-additional-data').text(JSON.stringify(response.additional_data, null, 2));
+                    } else {
+                        $('#log-additional-data').text('{\n  "status": "info",\n  "details": "No additional data available"\n}');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('#log-id').text('Error');
+                    $('#log-timestamp').text('Error');
+                    $('#log-event-type').text('Error');
+                    $('#log-user').text('Error');
+                    $('#log-ip').text('Error');
+                    $('#log-user-agent').text('Error');
+                    $('#log-description').text('Failed to retrieve log details');
+                    $('#log-additional-data').text('{\n  "status": "error",\n  "details": "Failed to retrieve additional data: ' + error + '"\n}');
+                }
+            });
+        });
+        
+        if (!$('#start_date').val()) {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            $('#start_date').val(formatDate(thirtyDaysAgo));
+        }
+        
+        if (!$('#end_date').val()) {
+            const today = new Date();
+            $('#end_date').val(formatDate(today));
+        }
+        
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+    });
+</script>
+{% endblock %} 
