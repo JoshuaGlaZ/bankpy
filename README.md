@@ -2,7 +2,7 @@ bankpy is a Django‑based banking information system that safeguards sensitive 
 
 - **User & Role Management** : Distinct access levels for Nasabah (Customer), Teller, and Manager
 - **Two‑Factor Authentication (2FA)** : TOTP‑compatible setup via Google Authenticator
-- **Field ** : AES‑encrypted storage of KTP numbers, addresses, and other PII
+- **Field Encryption** : AES‑encrypted storage of KTP numbers, addresses, and other PII
 - **Digital Signatures** : RSA‑PSS to guarantee transaction integrity
 - **Role‑Based Access Control** : Fine‑grained RBAC to enforce least‑privilege
 - **Audit Logging** : Immutable logs of security events and transaction histories
