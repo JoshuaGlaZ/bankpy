@@ -1,10 +1,11 @@
-## Fitur Utama
-- Manajemen Pengguna & Peran: Nasabah, Teller, dan Manajer dengan hak akses berbeda
-- Autentikasi Dua Faktor (2FA): TOTP compatible (Google Authenticator)
-- Enkripsi Data Sensitif: Field terenkripsi untuk nomor KTP, alamat, dll
-- Tanda Tangan Digital: RSA-PSS untuk integritas transaksi
-- Kontrol Akses Berbasis Peran: RBAC untuk membatasi fungsi sesuai peran
-- Audit Log Menyeluruh: Pencatatan aktivitas keamanan dan transaksi
+bankpy is a Django‑based banking information system that safeguards sensitive customer data with multi‑factor authentication, field‑level encryption, and cryptographic transaction signing. Built with robust role‑based access controls and comprehensive audit logging, it ensures both security and compliance for everyday banking operations.
+
+- **User & Role Management** : Distinct access levels for Nasabah (Customer), Teller, and Manager
+- **Two‑Factor Authentication (2FA)** : TOTP‑compatible setup via Google Authenticator
+- **Field ** : AES‑encrypted storage of KTP numbers, addresses, and other PII
+- **Digital Signatures** : RSA‑PSS to guarantee transaction integrity
+- **Role‑Based Access Control** : Fine‑grained RBAC to enforce least‑privilege
+- **Audit Logging** : Immutable logs of security events and transaction histories
 
 ## Screenshots
 2FA Setup
@@ -15,13 +16,13 @@ Audit Log
 
 ## Installation
 1. Clone repository:
-```
+```bash
 git clone https://github.com/JoshuaGlaZ/bankpy.git
 cd bankpy
 ```
 
 2. Virtual enviroment:
-```
+```bash
 python -m venv venv
 source venv/bin/activate  # Linux/MacOS
 venv\Scripts\activate    # Windows
@@ -29,10 +30,9 @@ pip install -r requirements.txt
 ```
 
 3. Run
-```
+```bash
 python manage.py migrate
 python manage.py createsuperuser
-python manage.py createsuperuser
-python manage.py seed_data # Simulasi Data
+python manage.py seed_data # Simulate users data
 python manage.py runserver
 ```
